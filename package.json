@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "vite build",
+    "prepare": "npm run build",
     "dev": "vite build --watch",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
@@ -24,7 +25,6 @@
   },
   "dependencies": {
     "@urbit/aura": "^3.0.0",
-    "@urbit/http-api": "file:../../vendor-http-api",
     "@urbit/nockjs": "^1.6.0",
     "any-ascii": "^0.3.2",
     "big-integer": "^1.6.52",

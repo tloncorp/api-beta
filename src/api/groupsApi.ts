@@ -1,4 +1,4 @@
-import { Poke } from '@urbit/http-api';
+import { Poke } from '../http-api';
 
 import * as db from '../db';
 import { GroupPrivacy } from '../db/types';

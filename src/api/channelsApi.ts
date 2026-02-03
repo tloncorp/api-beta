@@ -1,5 +1,5 @@
 import { render, da } from '@urbit/aura';
-import { Poke } from '@urbit/http-api';
+import { Poke } from '../http-api';
 
 import * as db from '../db';
 import { createDevLogger } from '../debug';

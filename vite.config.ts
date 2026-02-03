@@ -15,7 +15,6 @@ export default defineConfig({
         '@tiptap/core',
         '@tiptap/react',
         '@urbit/aura',
-        '@urbit/http-api',
         '@urbit/nockjs',
         'any-ascii',
         'big-integer',
