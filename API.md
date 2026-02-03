@@ -221,6 +221,195 @@ Represents a user profile.
 
 ---
 
+## Parameter Types
+
+These types are used as parameters in API function calls.
+
+### Story
+
+The rich content format for messages. See [Message Content](#message-content-story) section below for full details.
+
+```typescript
+type Story = (InlineBlock | BlockWrapper)[];
+
+// Simple text example:
+const story: Story = [{ inline: ['Hello world'] }];
+
+// With formatting:
+const story: Story = [{ inline: ['Hello ', { bold: ['world'] }] }];
+```
+
+### GroupMeta
+
+Metadata for updating a group's display information.
+
+```typescript
+interface GroupMeta {
+  title?: string;       // Display name
+  description?: string; // Group description
+  image?: string;       // Icon image URL
+  cover?: string;       // Cover/banner image URL
+}
+```
+
+**Example:**
+```typescript
+const meta: GroupMeta = {
+  title: 'My Updated Group',
+  description: 'A new description for the group',
+  image: 'https://example.com/icon.png',
+  cover: 'https://example.com/banner.jpg'
+};
+```
+
+### ClientMeta
+
+Metadata for channels, roles, and navigation sections.
+
+```typescript
+interface ClientMeta {
+  title?: string;           // Display name
+  description?: string;     // Description text
+  iconImage?: string;       // Icon image URL
+  coverImage?: string;      // Cover image URL
+  iconImageColor?: string;  // Fallback color for icon
+  coverImageColor?: string; // Fallback color for cover
+}
+```
+
+**Example:**
+```typescript
+const meta: ClientMeta = {
+  title: 'Announcements',
+  description: 'Important updates from admins',
+  iconImage: 'https://example.com/megaphone.png'
+};
+```
+
+### PostMetadata
+
+Metadata for notebook/diary posts and gallery items.
+
+```typescript
+interface PostMetadata {
+  title?: string;       // Post title
+  description?: string; // Post summary/excerpt
+  image?: string;       // Featured image URL
+  cover?: string;       // Cover image URL
+}
+```
+
+**Example:**
+```typescript
+const metadata: PostMetadata = {
+  title: 'My Blog Post Title',
+  description: 'A brief summary of this post',
+  image: 'https://example.com/featured-image.jpg'
+};
+```
+
+### ChannelCreate
+
+Parameters for creating a new channel.
+
+```typescript
+interface ChannelCreate {
+  kind: 'chat' | 'diary' | 'heap';  // Channel type
+  group: string;                     // Group ID to add channel to
+  name: string;                      // URL-safe channel name
+  title: string;                     // Display title
+  description: string;               // Channel description
+  readers: string[];                 // Role IDs that can read
+  writers: string[];                 // Role IDs that can write
+}
+```
+
+**Example:**
+```typescript
+await createChannel({
+  id: 'chat/~sampel-palnet/announcements',
+  kind: 'chat',
+  group: '~sampel-palnet/my-group',
+  name: 'announcements',
+  title: 'Announcements',
+  description: 'Important updates',
+  readers: [],      // Empty = all members can read
+  writers: ['admin'] // Only admin role can write
+});
+```
+
+### GroupNavSection
+
+A navigation section for organizing channels within a group.
+
+```typescript
+interface GroupNavSection {
+  id: string;              // Unique section ID
+  sectionId: string;       // Section identifier
+  groupId?: string;        // Parent group ID
+  title?: string;          // Section display name
+  description?: string;    // Section description
+  sectionIndex?: number;   // Display order
+  channels?: GroupNavSectionChannel[]; // Channels in this section
+}
+```
+
+**Example:**
+```typescript
+const section: GroupNavSection = {
+  id: 'section-123',
+  sectionId: 'general',
+  groupId: '~sampel-palnet/my-group',
+  title: 'General',
+  description: 'Main discussion channels',
+  sectionIndex: 0,
+  channels: [
+    { channelId: 'chat/~sampel-palnet/general', channelIndex: 0 },
+    { channelId: 'chat/~sampel-palnet/random', channelIndex: 1 }
+  ]
+};
+```
+
+### Cursor
+
+A pagination cursor for fetching posts. Typically a post ID string.
+
+```typescript
+type Cursor = string;  // Usually a post ID like '170690000000000'
+```
+
+**Example:**
+```typescript
+// First request - no cursor
+const { posts, cursor } = await getChannelPosts({
+  channelId: 'chat/~sampel-palnet/general',
+  count: 50,
+  mode: 'newest'
+});
+
+// Next request - use returned cursor
+const { posts: morePosts } = await getChannelPosts({
+  channelId: 'chat/~sampel-palnet/general',
+  cursor: cursor,  // '170690000000000'
+  count: 50,
+  mode: 'older'
+});
+```
+
+### VolumeSettings
+
+Notification volume settings for groups, channels, or threads.
+
+```typescript
+interface VolumeSettings {
+  itemId: string;                              // ID of group/channel/thread
+  itemType: 'group' | 'channel' | 'thread' | 'base';
+  level: 'loud' | 'medium' | 'soft' | 'hush'; // Notification level
+}
+```
+
+---
+
 ## Message Content (Story)
 
 Messages use the `Story` format - an array of content blocks:
@@ -1026,6 +1215,24 @@ async function addGroupRole(params: { groupId: string; roleId: string; meta: db.
 
 Creates a new role in a group with the specified ID and metadata.
 
+**Parameters:**
+- `groupId` - Group to add role to (e.g., `'~sampel-palnet/my-group'`)
+- `roleId` - Unique role identifier (e.g., `'moderator'`)
+- `meta` - `ClientMeta` object with role display info
+
+**Example:**
+```typescript
+await addGroupRole({
+  groupId: '~sampel-palnet/book-club',
+  roleId: 'moderator',
+  meta: {
+    title: 'Moderator',
+    description: 'Can manage posts and members',
+    iconImage: 'https://example.com/mod-badge.png'
+  }
+});
+```
+
 ---
 
 #### `updateGroupRole`
@@ -1056,6 +1263,15 @@ async function addMembersToRole(params: { groupId: string; roleId: string; ships
 
 Assigns a role to the specified group members.
 
+**Example:**
+```typescript
+await addMembersToRole({
+  groupId: '~sampel-palnet/book-club',
+  roleId: 'moderator',
+  ships: ['~zod', '~bus']
+});
+```
+
 ---
 
 #### `removeMembersFromRole`
@@ -1077,6 +1293,24 @@ async function addNavSection(params: { groupId: string; navSection: db.GroupNavS
 ```
 
 Creates a new navigation section (zone) in a group for organizing channels.
+
+**Parameters:**
+- `groupId` - Group to add section to
+- `navSection` - `GroupNavSection` object with section details
+
+**Example:**
+```typescript
+await addNavSection({
+  groupId: '~sampel-palnet/book-club',
+  navSection: {
+    id: 'section-resources',
+    sectionId: 'resources',
+    title: 'Resources',
+    description: 'Helpful links and documents',
+    sectionIndex: 2
+  }
+});
+```
 
 ---
 
@@ -1240,16 +1474,58 @@ async function createChannel(params: ub.Create & { id: string }): Promise<void>;
 
 **Parameters:**
 
--   `id: string` - The channel identifier
--   `kind: string` - Channel type (chat, diary, heap)
--   `group: string` - The group to create the channel in
--   `name: string` - Channel name
+-   `id: string` - The channel identifier (e.g., `'chat/~zod/my-channel'`)
+-   `kind: string` - Channel type: `'chat'` | `'diary'` | `'heap'`
+-   `group: string` - The group ID to create the channel in
+-   `name: string` - URL-safe channel name
 -   `title: string` - Display title
 -   `description: string` - Channel description
--   `readers: string[]` - Roles that can read
--   `writers: string[]` - Roles that can write
+-   `readers: string[]` - Role IDs that can read (empty = all members)
+-   `writers: string[]` - Role IDs that can write (empty = all members)
 
 Creates a new channel by sending a tracked poke to the channels agent.
+
+**Example - Create a chat channel:**
+```typescript
+await createChannel({
+  id: 'chat/~sampel-palnet/announcements',
+  kind: 'chat',
+  group: '~sampel-palnet/book-club',
+  name: 'announcements',
+  title: 'Announcements',
+  description: 'Important updates from admins',
+  readers: [],        // All members can read
+  writers: ['admin']  // Only admin role can write
+});
+```
+
+**Example - Create a notebook:**
+```typescript
+await createChannel({
+  id: 'diary/~sampel-palnet/blog',
+  kind: 'diary',
+  group: '~sampel-palnet/book-club',
+  name: 'blog',
+  title: 'Book Reviews',
+  description: 'Member book reviews and recommendations',
+  readers: [],
+  writers: []  // All members can post
+});
+```
+
+**Example - Create a gallery:**
+```typescript
+await createChannel({
+  id: 'heap/~sampel-palnet/photos',
+  kind: 'heap',
+  group: '~sampel-palnet/book-club',
+  name: 'photos',
+  title: 'Book Photos',
+  description: 'Share photos of your reading setup',
+  readers: [],
+  writers: []
+});
+```
 
 ---
 
@@ -1881,6 +2157,25 @@ async function respondToDMInvite(params: { channel: db.Channel; accept: boolean 
 
 Accepts or declines a DM invitation, handling both regular DMs and group DMs.
 
+**Parameters:**
+- `channel` - The `Channel` object representing the DM invite (from getInitData or subscription)
+- `accept` - `true` to accept, `false` to decline
+
+**Example:**
+```typescript
+// Get pending DM invites from init data
+const { channels } = await getInitData();
+const pendingInvite = channels.find(c => c.isDmInvite);
+
+if (pendingInvite) {
+  // Accept the DM invite
+  await respondToDMInvite({
+    channel: pendingInvite,
+    accept: true
+  });
+}
+```
+
 ---
 
 #### `updateDMMeta`
@@ -1890,6 +2185,22 @@ async function updateDMMeta(params: { channelId: string; meta: db.ClientMeta }):
 ```
 
 Updates the metadata (title, description, images) of a group DM channel.
+
+**Parameters:**
+- `channelId` - Group DM channel ID (e.g., `'0v4.00000.qd4p2...'`)
+- `meta` - `ClientMeta` object with updated display info
+
+**Example:**
+```typescript
+await updateDMMeta({
+  channelId: '0v4.00000.qd4p2.it253.qs53q.s53qs',
+  meta: {
+    title: 'Project Team Chat',
+    description: 'Discussion for Q1 project',
+    iconImage: 'https://example.com/team-icon.png'
+  }
+});
+```
 
 ---
 
