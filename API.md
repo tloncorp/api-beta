@@ -15,10 +15,10 @@ pnpm add @tloncorp/api
 The high-level API functions (`sendPost`, `getGroups`, `getCurrentUserId`, etc.) use an internal singleton client that must be configured first:
 
 ```typescript
-import { internalConfigureClient, sendPost, getCurrentUserId, subscribeToChannelsUpdates } from '@tloncorp/api';
+import { configureClient, sendPost, getCurrentUserId, subscribeToChannelsUpdates } from '@tloncorp/api';
 
 // Configure the internal client (required before using high-level API functions)
-internalConfigureClient({
+configureClient({
   shipName: '~zod',
   shipUrl: 'http://localhost:8080',
   getCode: async () => 'lidlut-tabwed-pillex-ridrup',
@@ -67,7 +67,7 @@ client.subscribe({
 });
 ```
 
-**Note:** The `Urbit` class and `internalConfigureClient` are separate. Creating a `new Urbit()` instance does NOT configure the singleton used by high-level functions. If you need both, configure the singleton separately.
+**Note:** The `Urbit` class and `configureClient` are separate. Creating a `new Urbit()` instance does NOT configure the singleton used by high-level functions. If you need both, configure the singleton separately.
 
 ---
 
@@ -121,6 +121,106 @@ getChannelIdType('chat/~zod/general');    // 'channel'
 
 ---
 
+## Data Types
+
+### Group
+
+Represents a Tlon group with channels, members, and settings.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Group identifier (e.g., `~host/group-name`) |
+| `title` | `string?` | Display name |
+| `description` | `string?` | Group description |
+| `iconImage` | `string?` | Icon image URL |
+| `coverImage` | `string?` | Cover/banner image URL |
+| `privacy` | `'public' \| 'private' \| 'secret'` | Visibility setting |
+| `hostUserId` | `string` | Ship that hosts the group |
+| `currentUserIsMember` | `boolean` | Whether you're a member |
+| `currentUserIsHost` | `boolean` | Whether you're the host |
+| `memberCount` | `number?` | Total member count |
+| `lastPostAt` | `number?` | Timestamp of most recent post |
+| `channels` | `Channel[]?` | Nested channels (if populated) |
+| `members` | `ChatMember[]?` | Member list (if populated) |
+| `roles` | `GroupRole[]?` | Custom roles |
+| `navSections` | `GroupNavSection[]?` | Channel organization sections |
+
+### Channel
+
+Represents a chat, notebook, gallery, DM, or group DM.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Channel identifier |
+| `type` | `'chat' \| 'notebook' \| 'gallery' \| 'dm' \| 'groupDm'` | Channel type |
+| `groupId` | `string?` | Parent group (null for DMs) |
+| `title` | `string?` | Display name |
+| `description` | `string?` | Channel description |
+| `iconImage` | `string?` | Icon image URL |
+| `currentUserIsMember` | `boolean?` | Membership status |
+| `postCount` | `number?` | Total post count |
+| `unreadCount` | `number?` | Unread message count |
+| `lastPostId` | `string?` | Most recent post ID |
+| `lastPostAt` | `number?` | Most recent post timestamp |
+| `members` | `ChatMember[]?` | Member list (for DMs/group DMs) |
+| `isDmInvite` | `boolean?` | Whether this is a pending DM invite |
+
+### Post
+
+Represents a message, note, or gallery item.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Post identifier |
+| `authorId` | `string` | Author's ship name |
+| `channelId` | `string` | Channel where posted |
+| `groupId` | `string?` | Parent group |
+| `parentId` | `string?` | Parent post (for replies) |
+| `type` | `'chat' \| 'note' \| 'block' \| 'reply' \| 'notice'` | Post type |
+| `content` | `Story` | Rich content (see Message Content) |
+| `textContent` | `string?` | Plain text extraction |
+| `title` | `string?` | Title (notebooks/galleries) |
+| `image` | `string?` | Featured image URL |
+| `sentAt` | `number` | Send timestamp (Unix ms) |
+| `receivedAt` | `number` | Receive timestamp |
+| `replyCount` | `number?` | Number of replies |
+| `replyTime` | `number?` | Most recent reply timestamp |
+| `reactions` | `Reaction[]?` | Emoji reactions |
+| `replies` | `Post[]?` | Nested replies (if populated) |
+| `author` | `Contact?` | Author info (if populated) |
+| `isEdited` | `boolean?` | Whether post was edited |
+| `isDeleted` | `boolean?` | Whether post was deleted |
+| `deliveryStatus` | `'pending' \| 'sent' \| 'failed'` | Send status |
+
+### Contact
+
+Represents a user profile.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Ship name (e.g., `~sampel-palnet`) |
+| `nickname` | `string?` | Computed display name |
+| `peerNickname` | `string?` | Name they set for themselves |
+| `customNickname` | `string?` | Name you set for them |
+| `avatarImage` | `string?` | Computed avatar URL |
+| `bio` | `string?` | Profile biography |
+| `status` | `string?` | Current status message |
+| `color` | `string?` | Profile accent color |
+| `coverImage` | `string?` | Profile banner image |
+| `isBlocked` | `boolean?` | Whether blocked by you |
+| `isContact` | `boolean?` | In your contact book |
+| `attestations` | `Attestation[]?` | Verified identities |
+
+### Reaction
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `contactId` | `string` | Who reacted |
+| `postId` | `string` | Post that was reacted to |
+| `value` | `string` | Emoji reaction |
+
+---
+
 ## Message Content (Story)
 
 Messages use the `Story` format - an array of content blocks:
@@ -154,10 +254,10 @@ const code: Story = [{ block: { code: { code: 'const x = 1;', lang: 'typescript'
 ### Connect and Send a Message
 
 ```typescript
-import { internalConfigureClient, sendPost, getCurrentUserId } from '@tloncorp/api';
+import { configureClient, sendPost, getCurrentUserId } from '@tloncorp/api';
 
 // Configure the internal client first
-internalConfigureClient({
+configureClient({
   shipName: '~zod',
   shipUrl: 'http://localhost:8080',
   getCode: async () => 'lidlut-tabwed-pillex-ridrup',
@@ -222,7 +322,7 @@ console.log(`Post has ${postWithReplies.replyCount} replies`);
 ```typescript
 import { subscribeToChannelsUpdates, subscribeToActivity, unsubscribe } from '@tloncorp/api';
 
-// Assumes internalConfigureClient was already called
+// Assumes configureClient was already called
 
 // Listen for new messages, edits, and deletions
 await subscribeToChannelsUpdates((update) => {
@@ -259,7 +359,7 @@ await subscribeToActivity((event) => {
 ```typescript
 import { createGroup, addChannelToGroup, inviteGroupMembers, getCurrentUserId } from '@tloncorp/api';
 
-// Assumes internalConfigureClient was already called
+// Assumes configureClient was already called
 const myShip = getCurrentUserId();
 
 // Create the group (id is auto-generated by the backend, pass empty string)
@@ -296,7 +396,7 @@ await inviteGroupMembers({
 ```typescript
 import { sendPost, getCurrentUserId } from '@tloncorp/api';
 
-// Assumes internalConfigureClient was already called
+// Assumes configureClient was already called
 const myShip = getCurrentUserId();
 
 // DM channel ID is just the other user's ship name
@@ -314,7 +414,7 @@ await sendPost({
 
 ```typescript
 import {
-  internalConfigureClient,
+  configureClient,
   sendPost,
   BadResponseError,
   TimeoutError,
@@ -323,7 +423,7 @@ import {
 
 try {
   // Configure the client
-  internalConfigureClient({
+  configureClient({
     shipName: '~zod',
     shipUrl: 'http://localhost:8080',
     getCode: async () => 'your-code',
@@ -551,10 +651,10 @@ Returns whether the current user's ship is running on Tlon's hosted infrastructu
 
 ---
 
-#### `internalConfigureClient`
+#### `configureClient`
 
 ```typescript
-function internalConfigureClient(params: ClientParams): void;
+function configureClient(params: ClientParams): void;
 ```
 
 **Parameters:**
@@ -570,13 +670,13 @@ function internalConfigureClient(params: ClientParams): void;
 
 **IMPORTANT:** This function configures the internal singleton client used by all high-level API functions (`sendPost`, `getGroups`, `getCurrentUserId`, `subscribeToChannelsUpdates`, etc.). You must call this before using those functions.
 
-**Note:** Creating a `new Urbit()` instance does NOT configure the singleton. Use `internalConfigureClient` for high-level API functions, or use the `Urbit` class directly for low-level operations.
+**Note:** Creating a `new Urbit()` instance does NOT configure the singleton. Use `configureClient` for high-level API functions, or use the `Urbit` class directly for low-level operations.
 
 ```typescript
-import { internalConfigureClient, sendPost, getCurrentUserId } from '@tloncorp/api';
+import { configureClient, sendPost, getCurrentUserId } from '@tloncorp/api';
 
 // This is REQUIRED before using sendPost, getCurrentUserId, etc.
-internalConfigureClient({
+configureClient({
   shipName: '~zod',
   shipUrl: 'http://localhost:8080',
   getCode: async () => 'lidlut-tabwed-pillex-ridrup',
@@ -607,9 +707,15 @@ Checks whether the Urbit node is currently busy processing requests.
 async function getInitData(): Promise<InitData>;
 ```
 
-**Returns:** `InitData` containing groups, channels, DMs, unreads, pins, hidden posts, and blocked users
-
 Fetches all initial application data in a single request for app startup.
+
+**Response Data:** `InitData` object containing:
+- `groups` - Array of `Group` objects the user belongs to
+- `channels` - Array of `Channel` objects (group channels, DMs, group DMs)
+- `unreads` - `ActivityInit` with unread counts per group/channel/thread
+- `pins` - Array of `Pin` objects (pinned groups, channels, DMs)
+- `hiddenPosts` - Array of hidden post IDs
+- `blockedUsers` - Array of blocked user IDs
 
 ---
 
@@ -635,6 +741,8 @@ async function getGroup(groupId: string): Promise<db.Group>;
 
 Retrieves a single group by its ID via a scry request.
 
+**Response Data:** Single `Group` object (see `getGroups` for field descriptions).
+
 ---
 
 #### `getGroups`
@@ -644,6 +752,21 @@ async function getGroups(): Promise<db.Group[]>;
 ```
 
 Retrieves all groups the current user has joined.
+
+**Response Data:** Array of `Group` objects containing:
+- `id` - Group identifier (e.g., `~sampel-palnet/my-group`)
+- `title` - Display name of the group
+- `description` - Group description text
+- `iconImage` / `coverImage` - Image URLs for group branding
+- `privacy` - `'public'` | `'private'` | `'secret'`
+- `hostUserId` - Ship that hosts the group
+- `currentUserIsMember` / `currentUserIsHost` - Membership flags
+- `memberCount` - Number of members (if available)
+- `lastPostAt` - Timestamp of most recent post
+- `channels` - Array of `Channel` objects (if populated)
+- `members` - Array of `ChatMember` objects (if populated)
+- `roles` - Array of `GroupRole` objects (if populated)
+- `navSections` - Navigation sections for organizing channels
 
 ---
 
@@ -925,6 +1048,11 @@ async function getPinnedItems(): Promise<db.Pin[]>;
 
 Retrieves the current user's pinned items (groups, channels, DMs, group DMs).
 
+**Response Data:** Array of `Pin` objects containing:
+- `type` - `'group'` | `'channel'` | `'dm'` | `'groupDm'`
+- `itemId` - ID of the pinned item
+- `index` - Display order position
+
 ---
 
 #### `pinItem`
@@ -1084,6 +1212,8 @@ async function searchChannel(params: { channelId: string; query: string; cursor?
 
 Searches for posts matching a text query within a channel. Returns paginated results.
 
+**Response Data:** `{ posts: Post[], cursor: string }` - matching posts and pagination cursor.
+
 ---
 
 #### `getChannelHooksPreview`
@@ -1234,6 +1364,27 @@ async function getChannelPosts(params: { channelId: string; cursor?: Cursor; mod
 
 Fetches a paginated list of posts from a channel with cursor-based navigation.
 
+**Response Data:** `{ posts: Post[], cursor?: Cursor }` where each `Post` contains:
+- `id` - Unique post identifier
+- `authorId` - Ship that authored the post (e.g., `~sampel-palnet`)
+- `channelId` - Channel where the post was sent
+- `groupId` - Group the channel belongs to (if applicable)
+- `type` - `'chat'` | `'note'` | `'block'` | `'reply'` | `'notice'`
+- `content` - Story content (array of inline/block elements)
+- `textContent` - Plain text extraction of content
+- `sentAt` - Timestamp when sent (Unix ms)
+- `receivedAt` - Timestamp when received
+- `title` / `image` / `description` - Metadata for notebooks/galleries
+- `replyCount` - Number of replies to this post
+- `replyTime` - Timestamp of most recent reply
+- `replyContactIds` - Array of user IDs who replied
+- `reactions` - Array of `{ contactId, postId, value }` emoji reactions
+- `replies` - Array of reply `Post` objects (if `includeReplies: true`)
+- `author` - `Contact` object for the author (if populated)
+- `hasImage` / `hasLink` / `hasAppReference` - Content type flags
+- `isEdited` / `isDeleted` - Edit state flags
+- `deliveryStatus` - `'pending'` | `'sent'` | `'failed'` etc.
+
 ---
 
 #### `getInitialPosts`
@@ -1273,6 +1424,8 @@ async function getPostWithReplies(params: { postId: string; channelId: string; a
 ```
 
 Fetches a single post along with all its replies.
+
+**Response Data:** Single `Post` object with `replies` array populated (see `getChannelPosts` for field descriptions).
 
 ---
 
@@ -1368,6 +1521,22 @@ async function getContacts(): Promise<db.Contact[]>;
 
 Fetches all contacts by combining peer profiles, contact book entries, and contact suggestions.
 
+**Response Data:** Array of `Contact` objects containing:
+- `id` - Ship name (e.g., `~sampel-palnet`)
+- `nickname` - Display name (computed from peer or custom nickname)
+- `peerNickname` - Nickname set by the contact themselves
+- `customNickname` - Nickname you've set for this contact
+- `avatarImage` - Profile image URL (computed)
+- `peerAvatarImage` / `customAvatarImage` - Source avatar URLs
+- `bio` - Profile biography text
+- `status` - Current status message
+- `color` - Profile accent color
+- `coverImage` - Profile cover/banner image
+- `isBlocked` - Whether you've blocked this contact
+- `isContact` - Whether they're in your contact book
+- `isContactSuggestion` - Whether this is a suggested contact
+- `attestations` - Array of verified identity attestations (phone, etc.)
+
 ---
 
 #### `updateContactMetadata`
@@ -1420,6 +1589,12 @@ async function getGroupAndChannelUnreads(): Promise<db.ActivityInit>;
 
 Fetches all unread counts and activity summaries for groups, channels, and threads.
 
+**Response Data:** `ActivityInit` object containing:
+- `baseUnread` - Overall unread state (`{ id, count, notify, updatedAt }`)
+- `groupUnreads` - Array of `{ groupId, count, notify, notifyCount, updatedAt }`
+- `channelUnreads` - Array of `{ channelId, type, count, countWithoutThreads, notify, updatedAt, firstUnreadPostId }`
+- `threadActivity` - Array of `{ channelId, threadId, count, notify, updatedAt, firstUnreadPostId }`
+
 ---
 
 #### `getThreadUnreadsByChannel`
@@ -1452,6 +1627,18 @@ async function getInitialActivity(): Promise<{
 ```
 
 Fetches the initial page of activity events across all buckets.
+
+**Response Data:**
+- `events` - Array of `ActivityEvent` objects containing:
+  - `id` - Event identifier
+  - `type` - Event type (e.g., `'post'`, `'reply'`, `'group-ask'`)
+  - `bucketId` - `'all'` | `'mentions'` | `'replies'`
+  - `timestamp` - When the event occurred
+  - `channelId` / `groupId` - Where it happened
+  - `postId` / `authorId` - Related post info
+  - `isMention` / `shouldNotify` - Notification flags
+  - `content` - Event content data
+- `relevantUnreads` - `ActivityInit` object (see `getGroupAndChannelUnreads`)
 
 ---
 

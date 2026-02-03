@@ -14,7 +14,7 @@ export {
   client,
   getCurrentUserId,
   getCurrentUserIsHosted,
-  internalConfigureClient,
+  configureClient,
   checkIsNodeBusy,
   BadResponseError,
   TimeoutError,

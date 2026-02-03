@@ -145,7 +145,7 @@ export const getCurrentUserIsHosted = () => {
   return Hosting.nodeUrlIsHosted(implicitUrl);
 };
 
-export function internalConfigureClient({
+export function configureClient({
   shipName,
   shipUrl,
   verbose,
