@@ -8,7 +8,6 @@ export * from './object';
 export type * from './utilityTypes';
 export * from './timeoutSignal';
 export * from './EventEmitter';
-export * from './useEventEmitter';
 export * from './ProgressManager';
 export * from './telemetryFormatters';
 export * from './spyOn';

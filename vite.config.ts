@@ -11,9 +11,6 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
-        '@tanstack/react-query',
-        '@tiptap/core',
-        '@tiptap/react',
         '@urbit/aura',
         '@urbit/nockjs',
         'any-ascii',
@@ -23,7 +20,6 @@ export default defineConfig({
         'emoji-regex',
         'exponential-backoff',
         'libphonenumber-js',
-        'react',
         'sorted-btree',
         'uuid',
         // Note: lodash and validator are bundled (not external) for ESM/CJS compatibility

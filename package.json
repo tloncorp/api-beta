@@ -38,26 +38,6 @@
     "sorted-btree": "^1.8.1",
     "validator": "^13.7.0"
   },
-  "peerDependencies": {
-    "@tanstack/react-query": "^5.32.1",
-    "@tiptap/core": "^2.0.0",
-    "@tiptap/react": "^2.0.0",
-    "react": "^18.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@tanstack/react-query": {
-      "optional": true
-    },
-    "@tiptap/core": {
-      "optional": true
-    },
-    "@tiptap/react": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@types/lodash": "^4.14.202",
     "@types/validator": "^13.7.0",

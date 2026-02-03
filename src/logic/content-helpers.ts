@@ -18,7 +18,27 @@ import {
   pathToCite,
 } from '../urbit';
 import { fileFromPath } from '../utils/file';
-import { makeMention, makeParagraph, makeText } from './tiptap';
+
+// Inlined from tiptap.ts to avoid @tiptap dependency
+const makeText = (t: string) => ({ type: 'text', text: t });
+const makeMention = (id: string) => ({
+  type: 'mention',
+  attrs: { id },
+});
+const makeParagraph = (content?: JSONContent[]): JSONContent => {
+  const p = { type: 'paragraph' };
+  if (!content) {
+    return p;
+  }
+  if (
+    content.length > 0 &&
+    content[0].type === 'text' &&
+    content[0].text === ''
+  ) {
+    return p;
+  }
+  return { ...p, content };
+};
 
 const logger = createDevLogger('content-helpers', false);
 
