@@ -773,6 +773,11 @@ async function reauth() {
             return;
           }
 
+          // Apply cookie to client for Node.js requests
+          if (config.client) {
+            config.client.cookie = authCookie;
+          }
+
           config.pendingAuth = null;
           resolve(authCookie);
           return;
