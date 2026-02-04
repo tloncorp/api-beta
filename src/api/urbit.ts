@@ -93,6 +93,8 @@ export interface ClientParams {
   handleAuthFailure?: () => void;
   onQuitOrReset?: (cause: 'subscriptionQuit' | 'reset') => void;
   onChannelStatusChange?: (status: ChannelStatus) => void;
+  /** Inject a pre-configured Urbit client instead of creating one */
+  client?: Urbit;
 }
 
 const config: Config = {
@@ -154,8 +156,9 @@ export function configureClient({
   handleAuthFailure,
   onQuitOrReset,
   onChannelStatusChange,
+  client: injectedClient,
 }: ClientParams) {
-  config.client = config.client || new Urbit(shipUrl, '', '', fetchFn);
+  config.client = injectedClient || config.client || new Urbit(shipUrl, '', '', fetchFn);
   config.client.verbose = verbose;
   config.client.nodeId = preSig(shipName);
   config.shipUrl = shipUrl;
