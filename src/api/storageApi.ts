@@ -1,6 +1,12 @@
+import { render, da } from '@urbit/aura';
+
+import { createDevLogger } from '../debug';
+import { desig } from '../urbit';
 import * as ub from '../urbit';
 import { StorageConfiguration, StorageCredentials } from './upload';
-import { scry, subscribe } from './urbit';
+import { scry, subscribe, getCurrentUserId, getCurrentUserIsHosted } from './urbit';
+
+const logger = createDevLogger('storageApi', false);
 
 export type StorageUpdateCredentials = ub.StorageUpdateCredentials & {
   type: 'storageCredentialsChanged';
@@ -121,3 +127,168 @@ export const getStorageCredentials = async (): Promise<StorageCredentials> => {
   });
   return credentials['storage-update'].credentials;
 };
+
+// =============================================================================
+// Upload functionality
+// =============================================================================
+
+const MEMEX_BASE_URL = 'https://memex.tlon.network';
+
+const mimeToExt: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/heic': '.heic',
+  'image/heif': '.heif',
+};
+
+function getExtensionFromMimeType(mimeType?: string): string {
+  if (!mimeType) return '.jpg';
+  return mimeToExt[mimeType.toLowerCase()] || '.jpg';
+}
+
+function hasCustomS3Creds(
+  credentials: StorageCredentials | null
+): credentials is StorageCredentials {
+  return !!(
+    credentials?.accessKeyId &&
+    credentials?.endpoint &&
+    credentials?.secretAccessKey
+  );
+}
+
+export interface UploadFileParams {
+  blob: Blob;
+  fileName?: string;
+  contentType?: string;
+}
+
+export interface UploadResult {
+  url: string;
+}
+
+/**
+ * Upload a file to storage.
+ *
+ * For hosted users, uploads via Memex.
+ * For self-hosted users with custom S3, requires a presigned URL generator to be provided.
+ *
+ * @param params - The file to upload (blob, optional fileName and contentType)
+ * @param options.getPresignedUrl - Optional function to generate presigned URLs for custom S3.
+ *   If not provided and user has custom S3 credentials, will throw an error.
+ */
+export async function uploadFile(
+  params: UploadFileParams,
+  options?: {
+    getPresignedUrl?: (params: {
+      config: StorageConfiguration;
+      credentials: StorageCredentials;
+      fileKey: string;
+      contentType: string;
+    }) => Promise<{ uploadUrl: string; publicUrl: string }>;
+  }
+): Promise<UploadResult> {
+  const [config, credentials] = await Promise.all([
+    getStorageConfiguration(),
+    getStorageCredentials(),
+  ]);
+
+  const contentType = params.contentType || params.blob.type || 'application/octet-stream';
+  const extension = getExtensionFromMimeType(contentType);
+  const fileName = params.fileName || `upload${extension}`;
+
+  const currentUser = getCurrentUserId();
+  const fileKey = `${desig(currentUser)}/${desig(
+    render('da', da.fromUnix(Date.now()))
+  )}-${fileName}`;
+
+  logger.log('uploading file', { fileKey, contentType, size: params.blob.size });
+
+  const isHosted = getCurrentUserIsHosted();
+  const useMemex = isHosted && (config.service === 'presigned-url' || !hasCustomS3Creds(credentials));
+
+  if (useMemex) {
+    const { hostedUrl, uploadUrl } = await getMemexUploadUrl({
+      contentLength: params.blob.size,
+      contentType,
+      fileName: fileKey,
+    });
+
+    await fetch(uploadUrl, {
+      method: 'PUT',
+      body: params.blob,
+      headers: {
+        'Cache-Control': 'public, max-age=3600',
+        'Content-Type': contentType,
+      },
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+    });
+
+    return { url: hostedUrl };
+  }
+
+  // Custom S3 path
+  if (!hasCustomS3Creds(credentials)) {
+    throw new Error('No storage credentials configured');
+  }
+
+  if (!options?.getPresignedUrl) {
+    throw new Error(
+      'Custom S3 storage requires a getPresignedUrl function. ' +
+      'Install @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner to generate presigned URLs.'
+    );
+  }
+
+  const { uploadUrl, publicUrl } = await options.getPresignedUrl({
+    config,
+    credentials,
+    fileKey,
+    contentType,
+  });
+
+  await fetch(uploadUrl, {
+    method: 'PUT',
+    body: params.blob,
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=3600',
+    },
+  }).then((res) => {
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  });
+
+  return { url: publicUrl };
+}
+
+async function getMemexUploadUrl(params: {
+  contentLength: number;
+  contentType: string;
+  fileName: string;
+}): Promise<{ hostedUrl: string; uploadUrl: string }> {
+  const currentUser = getCurrentUserId();
+  const token = await scry<string>({
+    app: 'genuine',
+    path: '/secret',
+  });
+
+  const endpoint = `${MEMEX_BASE_URL}/v1/${desig(currentUser)}/upload`;
+  const response = await fetch(endpoint, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, ...params }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Memex upload request failed: ${response.status}`);
+  }
+
+  const data: { url?: string; filePath?: string } | null = await response.json();
+  if (!data?.url || !data?.filePath) {
+    throw new Error('Invalid response from Memex');
+  }
+
+  return { hostedUrl: data.filePath, uploadUrl: data.url };
+}

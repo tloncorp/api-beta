@@ -175,7 +175,10 @@ export {
   getStorageConfiguration,
   getStorageCredentials,
   subscribeToStorageUpdates,
+  uploadFile,
   type StorageUpdate,
+  type UploadFileParams,
+  type UploadResult,
 } from './storageApi';
 
 // =============================================================================
