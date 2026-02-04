@@ -1,3 +1,5 @@
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { render, da } from '@urbit/aura';
 
 import { createDevLogger } from '../debug';
@@ -173,23 +175,11 @@ export interface UploadResult {
  * Upload a file to storage.
  *
  * For hosted users, uploads via Memex.
- * For self-hosted users with custom S3, requires a presigned URL generator to be provided.
+ * For self-hosted users with custom S3, generates presigned URLs using AWS SDK.
  *
  * @param params - The file to upload (blob, optional fileName and contentType)
- * @param options.getPresignedUrl - Optional function to generate presigned URLs for custom S3.
- *   If not provided and user has custom S3 credentials, will throw an error.
  */
-export async function uploadFile(
-  params: UploadFileParams,
-  options?: {
-    getPresignedUrl?: (params: {
-      config: StorageConfiguration;
-      credentials: StorageCredentials;
-      fileKey: string;
-      contentType: string;
-    }) => Promise<{ uploadUrl: string; publicUrl: string }>;
-  }
-): Promise<UploadResult> {
+export async function uploadFile(params: UploadFileParams): Promise<UploadResult> {
   const [config, credentials] = await Promise.all([
     getStorageConfiguration(),
     getStorageCredentials(),
@@ -235,32 +225,59 @@ export async function uploadFile(
     throw new Error('No storage credentials configured');
   }
 
-  if (!options?.getPresignedUrl) {
-    throw new Error(
-      'Custom S3 storage requires a getPresignedUrl function. ' +
-      'Install @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner to generate presigned URLs.'
-    );
-  }
-
-  const { uploadUrl, publicUrl } = await options.getPresignedUrl({
-    config,
-    credentials,
-    fileKey,
-    contentType,
+  const endpoint = new URL(prefixEndpoint(credentials.endpoint));
+  const client = new S3Client({
+    endpoint: {
+      protocol: endpoint.protocol.slice(0, -1) as 'http' | 'https',
+      hostname: endpoint.host,
+      path: endpoint.pathname || '/',
+    },
+    region: config.region || 'us-east-1',
+    credentials: {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+    },
+    forcePathStyle: true,
   });
 
-  await fetch(uploadUrl, {
+  const headers: Record<string, string> = {
+    'Content-Type': contentType,
+    'Cache-Control': 'public, max-age=3600',
+    'x-amz-acl': 'public-read',
+  };
+
+  const command = new PutObjectCommand({
+    Bucket: config.currentBucket,
+    Key: fileKey,
+    ContentType: headers['Content-Type'],
+    CacheControl: headers['Cache-Control'],
+    ACL: 'public-read',
+  });
+
+  const signedUrl = await getSignedUrl(client, command, {
+    expiresIn: 3600,
+    signableHeaders: new Set(Object.keys(headers)),
+  });
+
+  const isDigitalOcean = signedUrl.includes('digitaloceanspaces.com');
+
+  await fetch(signedUrl, {
     method: 'PUT',
     body: params.blob,
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=3600',
-    },
+    headers: isDigitalOcean ? headers : undefined,
   }).then((res) => {
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
   });
 
+  const publicUrl = config.publicUrlBase
+    ? new URL(fileKey, config.publicUrlBase).toString()
+    : signedUrl.split('?')[0];
+
   return { url: publicUrl };
+}
+
+function prefixEndpoint(endpoint: string): string {
+  return endpoint.match(/https?:\/\//) ? endpoint : `https://${endpoint}`;
 }
 
 async function getMemexUploadUrl(params: {
