@@ -373,6 +373,10 @@ export async function pokeNoun<T>({ app, mark, noun }: NounPokeParams) {
     if (config.pendingAuth) {
       await config.pendingAuth;
     }
+    // Ensure we're authenticated before first poke (prevents guest session issues)
+    if (!config.client.cookie && config.getCode) {
+      await reauth();
+    }
     logger.log('noun poke', { app, mark });
     return config.client.pokeNoun({
       ...params,
@@ -413,6 +417,10 @@ export async function poke({ app, mark, json }: PokeParams) {
     }
     if (config.pendingAuth) {
       await config.pendingAuth;
+    }
+    // Ensure we're authenticated before first poke (prevents guest session issues)
+    if (!config.client.cookie && config.getCode) {
+      await reauth();
     }
     return config.client.poke({
       ...params,
@@ -594,6 +602,10 @@ export async function scry<T>({
   if (config.pendingAuth) {
     await config.pendingAuth;
   }
+  // Ensure we're authenticated before first scry (prevents guest session issues)
+  if (!config.client.cookie && config.getCode) {
+    await reauth();
+  }
   logger.log('scry', app, path);
   const trackDuration = createDurationTracker(AnalyticsEvent.Scry, {
     app,
@@ -682,6 +694,11 @@ export async function thread<T, R = any>(params: Thread<T>): Promise<R> {
 
   if (!config.client) {
     throw new Error('Cannot call thread before client is initialized');
+  }
+
+  // Ensure we're authenticated before thread request (prevents guest session issues)
+  if (!config.client.cookie && config.getCode) {
+    await reauth();
   }
 
   const trackDuration = createDurationTracker(AnalyticsEvent.Thread, {
