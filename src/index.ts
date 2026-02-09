@@ -4,15 +4,6 @@
 
 // Re-export all public API functions
 export * from './api';
-export {
-  configureClient,
-  uploadFile,
-  type ClientParams,
-  type UploadFileParams,
-  type UploadResult,
-  type ConfigureClientFn,
-  type UploadFileFn,
-} from './api';
 
 // Re-export HTTP client
 export { Urbit, AuthError } from './http-api';
