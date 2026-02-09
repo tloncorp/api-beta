@@ -23,6 +23,9 @@ export {
   type ClientParams,
 } from './urbit';
 
+// Helpful function signatures for consumers that dynamically load the module.
+export type ConfigureClientFn = (params: import('./urbit').ClientParams) => void;
+
 // =============================================================================
 // PUBLIC API - Initialization
 // =============================================================================
@@ -180,6 +183,11 @@ export {
   type UploadFileParams,
   type UploadResult,
 } from './storageApi';
+
+// Helpful function signatures for consumers that dynamically load the module.
+export type UploadFileFn = (
+  params: import('./storageApi').UploadFileParams
+) => Promise<import('./storageApi').UploadResult>;
 
 // =============================================================================
 // PUBLIC API - Connection Status
