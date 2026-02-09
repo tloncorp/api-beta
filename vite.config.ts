@@ -6,24 +6,15 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      formats: ['es'],
-      fileName: 'index',
+      formats: ['es', 'cjs'],
+      fileName: (format) => (format === 'es' ? 'index.js' : 'index.cjs'),
     },
     rollupOptions: {
-      external: [
-        '@urbit/aura',
-        '@urbit/nockjs',
-        'any-ascii',
-        'big-integer',
-        'browser-or-node',
-        'date-fns',
-        'emoji-regex',
-        'exponential-backoff',
-        'libphonenumber-js',
-        'sorted-btree',
-        'uuid',
-        // Note: lodash and validator are bundled (not external) for ESM/CJS compatibility
-      ],
+      output: {
+        // Keep each format as a single entry file so CJS doesn't rely on .js chunks
+        // inside a "type": "module" package.
+        inlineDynamicImports: true,
+      },
     },
     sourcemap: true,
     outDir: 'dist',
