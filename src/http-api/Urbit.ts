@@ -1028,7 +1028,7 @@ export class Urbit {
     const signal = timeout ? utils.createTimeoutSignal(timeout) : undefined;
 
     const result = await this.fetchFn(
-      `${this.url}/spider/${desk}/${inputMark}/${threadName}/${outputMark}`,
+      `${this.url}/spider/${desk}/${inputMark}/${threadName}/${outputMark}.json`,
       {
         ...this.fetchOptions,
         signal,
