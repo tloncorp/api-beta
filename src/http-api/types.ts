@@ -154,6 +154,8 @@ export type Action = 'poke' | 'subscribe' | 'ack' | 'unsubscribe' | 'delete';
 export interface PokeHandlers {
   onSuccess?: () => void;
   onError?: (e: any) => void;
+  /** If false, resolve immediately after PUT without waiting for SSE ack. Useful for CLI tools. */
+  waitForAck?: boolean;
 }
 
 export type PokeInterface<T> = PokeHandlers & Poke<T>;

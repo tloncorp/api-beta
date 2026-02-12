@@ -45,6 +45,8 @@ export type PokeParams = {
   app: string;
   mark: string;
   json: any;
+  /** If false, resolve immediately after PUT without waiting for SSE ack. Useful for CLI tools. */
+  waitForAck?: boolean;
 };
 
 export type NounPokeParams = {
@@ -402,7 +404,7 @@ export async function pokeNoun<T>({ app, mark, noun }: NounPokeParams) {
   }
 }
 
-export async function poke({ app, mark, json }: PokeParams) {
+export async function poke({ app, mark, json, waitForAck }: PokeParams) {
   logger.log('poke', app, mark, json);
   const trackDuration = createDurationTracker(AnalyticsEvent.Poke, {
     app,
@@ -421,6 +423,7 @@ export async function poke({ app, mark, json }: PokeParams) {
       app,
       mark,
       json,
+      waitForAck,
     });
   };
   const retry = async (err: any) => {

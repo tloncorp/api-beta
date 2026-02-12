@@ -752,7 +752,7 @@ export class Urbit {
    * @param json The data to send
    */
   async poke<T>(params: PokeInterface<T>): Promise<number> {
-    const { app, mark, json, ship, onSuccess, onError } = {
+    const { app, mark, json, ship, onSuccess, onError, waitForAck = true } = {
       onSuccess: () => {},
       onError: () => {},
       ship: desig(this.nodeId ?? ''),
@@ -771,6 +771,13 @@ export class Urbit {
       mark,
       json,
     };
+
+    // Fire-and-forget mode: just send the PUT and resolve immediately
+    if (!waitForAck) {
+      await this.sendJSONtoChannel(message);
+      onSuccess();
+      return message.id;
+    }
 
     return new Promise((resolve, reject) => {
       this.outstandingPokes.set(message.id, {
