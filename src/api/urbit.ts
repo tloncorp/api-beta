@@ -171,9 +171,10 @@ export async function configureClient({
   config.handleAuthFailure = handleAuthFailure;
   config.subWatchers = {};
 
-  // Connect if we got a code (client needs to authenticate)
+  // Connect and start event source if we got a code (client needs to authenticate)
   if (code) {
     await config.client.connect();
+    await config.client.eventSource();
   }
 
   // the below event handlers will only fire if verbose is set to true
