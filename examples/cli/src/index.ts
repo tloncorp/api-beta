@@ -77,7 +77,7 @@ async function main() {
 
   // Configure client
   console.log("Configuring API client...");
-  configureClient({
+  await configureClient({
     shipName: ship,
     shipUrl: url,
     verbose: false,
