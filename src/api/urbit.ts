@@ -158,7 +158,11 @@ export async function configureClient({
   onChannelStatusChange,
   client: injectedClient,
 }: ClientParams) {
-  config.client = injectedClient || config.client || new Urbit(shipUrl, '', '', fetchFn);
+  // If no pre-authenticated client was injected and we have a way to get
+  // the auth code, get it now so we can pass it to the Urbit constructor.
+  const code = !injectedClient && getCode ? await getCode() : '';
+  
+  config.client = injectedClient || config.client || new Urbit(shipUrl, code, '', fetchFn);
   config.client.verbose = verbose;
   config.client.nodeId = preSig(shipName);
   config.shipUrl = shipUrl;
@@ -167,11 +171,9 @@ export async function configureClient({
   config.handleAuthFailure = handleAuthFailure;
   config.subWatchers = {};
 
-  // If no pre-authenticated client was injected and we have a way to get
-  // the auth code, connect now so the client is authenticated.
-  if (!injectedClient && getCode) {
-    const code = await getCode();
-    await config.client.connect(code);
+  // Connect if we got a code (client needs to authenticate)
+  if (code) {
+    await config.client.connect();
   }
 
   // the below event handlers will only fire if verbose is set to true
