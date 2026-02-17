@@ -335,7 +335,10 @@ export class Urbit {
         this.nodeId = match;
       }
       if (!isBrowser) {
-        this.cookie = cookie || undefined;
+        // Parse just the cookie key=value from Set-Cookie header.
+        // The header includes attributes like "Path=/; Max-Age=..." but
+        // we only want to send the actual cookie value in subsequent requests.
+        this.cookie = cookie?.split(';')[0].trim() || undefined;
       }
       this.getShipName();
       this.getOurName();
