@@ -147,7 +147,7 @@ export const getCurrentUserIsHosted = () => {
   return Hosting.nodeUrlIsHosted(implicitUrl);
 };
 
-export function configureClient({
+export async function configureClient({
   shipName,
   shipUrl,
   verbose,
@@ -158,7 +158,11 @@ export function configureClient({
   onChannelStatusChange,
   client: injectedClient,
 }: ClientParams) {
-  config.client = injectedClient || config.client || new Urbit(shipUrl, '', '', fetchFn);
+  // If no pre-authenticated client was injected and we have a way to get
+  // the auth code, get it now so we can pass it to the Urbit constructor.
+  const code = !injectedClient && getCode ? await getCode() : '';
+  
+  config.client = injectedClient || config.client || new Urbit(shipUrl, code, '', fetchFn);
   config.client.verbose = verbose;
   config.client.nodeId = preSig(shipName);
   config.shipUrl = shipUrl;
@@ -166,6 +170,12 @@ export function configureClient({
   config.getCode = getCode;
   config.handleAuthFailure = handleAuthFailure;
   config.subWatchers = {};
+
+  // Connect and start event source if we got a code (client needs to authenticate)
+  if (code) {
+    await config.client.connect();
+    await config.client.eventSource();
+  }
 
   // the below event handlers will only fire if verbose is set to true
   config.client.on('status-update', (event) => {
@@ -373,7 +383,6 @@ export async function pokeNoun<T>({ app, mark, noun }: NounPokeParams) {
     if (config.pendingAuth) {
       await config.pendingAuth;
     }
-    await ensureAuthenticated();
     logger.log('noun poke', { app, mark });
     return config.client.pokeNoun({
       ...params,
@@ -415,7 +424,6 @@ export async function poke({ app, mark, json }: PokeParams) {
     if (config.pendingAuth) {
       await config.pendingAuth;
     }
-    await ensureAuthenticated();
     return config.client.poke({
       ...params,
       app,
@@ -596,7 +604,6 @@ export async function scry<T>({
   if (config.pendingAuth) {
     await config.pendingAuth;
   }
-  await ensureAuthenticated();
   logger.log('scry', app, path);
   const trackDuration = createDurationTracker(AnalyticsEvent.Scry, {
     app,
@@ -687,8 +694,6 @@ export async function thread<T, R = any>(params: Thread<T>): Promise<R> {
     throw new Error('Cannot call thread before client is initialized');
   }
 
-  await ensureAuthenticated();
-
   const trackDuration = createDurationTracker(AnalyticsEvent.Thread, {
     desk: params.desk,
     inputMark: params.inputMark,
@@ -736,16 +741,6 @@ export async function request<T>(
 // ~solfer-magfed/ => [id]/
 function redactPath(path: string) {
   return path.replace(/~.+?(?:\/.+?)(\/|$)/g, '[id]/');
-}
-
-/**
- * Ensure we're authenticated before making a request.
- * Prevents guest session issues when cookie hasn't been set yet.
- */
-async function ensureAuthenticated() {
-  if (!config.client?.cookie && config.getCode) {
-    await reauth();
-  }
 }
 
 async function reauth() {
