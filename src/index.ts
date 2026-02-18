@@ -3,7 +3,7 @@
 // =============================================================================
 
 // Re-export all public API functions
-export * from './api';
+export * from './api/index.js';
 
 // Re-export HTTP client
 export { Urbit, AuthError } from './http-api';
