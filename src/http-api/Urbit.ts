@@ -340,8 +340,8 @@ export class Urbit {
         // we only want to send the actual cookie value in subsequent requests.
         this.cookie = cookie?.split(';')[0].trim() || undefined;
       }
-      this.getShipName();
-      this.getOurName();
+      await this.getShipName();
+      await this.getOurName();
     });
   }
 
