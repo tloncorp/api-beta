@@ -239,6 +239,23 @@ export {
 } from './hostingApi';
 
 // =============================================================================
+// PUBLIC API - Expose (Clearweb Publishing)
+// =============================================================================
+export {
+  listExposedContent,
+  checkPostExposed,
+  exposePost,
+  hideExposedPost,
+  setExposeEagerMode,
+  expandCitePath,
+  citePathToUrlPath,
+  getExposedPostUrl,
+  formatCite,
+  type ChannelKind,
+  type Cite,
+} from './exposeApi';
+
+// =============================================================================
 // PUBLIC API - AI Summarization
 // =============================================================================
 export {
