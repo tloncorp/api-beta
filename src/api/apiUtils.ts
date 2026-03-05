@@ -174,6 +174,7 @@ export function toPostEssay({
   channelType,
   blob,
   metadata,
+  botProfile,
 }: {
   content: ub.Story;
   authorId: string;
@@ -181,7 +182,17 @@ export function toPostEssay({
   channelType: db.ChannelType;
   blob?: string;
   metadata?: ub.Metadata;
+  botProfile?: { nickname?: string | null; avatar?: string | null };
 }): ub.PostEssay {
+  // If botProfile is provided, use BotProfile author format
+  const author: ub.Author = botProfile
+    ? {
+        ship: authorId,
+        nickname: botProfile.nickname ?? null,
+        avatar: botProfile.avatar ?? null,
+      }
+    : authorId;
+
   const essay: ub.PostEssay = {
     content,
     sent: sentAt,
@@ -191,7 +202,7 @@ export function toPostEssay({
         : channelType === 'gallery'
           ? '/heap'
           : '/chat',
-    author: authorId,
+    author,
     blob: blob || null,
     meta: metadata || null,
   };
