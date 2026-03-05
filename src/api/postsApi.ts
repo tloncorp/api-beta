@@ -142,6 +142,7 @@ export const sendPost = async ({
   content,
   blob,
   metadata,
+  botProfile,
 }: {
   channelId: string;
   authorId: string;
@@ -149,9 +150,19 @@ export const sendPost = async ({
   content: Story;
   blob?: string;
   metadata?: db.PostMetadata;
+  botProfile?: { nickname?: string | null; avatar?: string | null };
 }) => {
   logger.log('sending post', { channelId, authorId, sentAt, content });
   const channelType = getChannelType(channelId);
+
+  // Build author - either simple ship or BotProfile object
+  const author: ub.Author = botProfile
+    ? {
+        ship: authorId,
+        nickname: botProfile.nickname ?? null,
+        avatar: botProfile.avatar ?? null,
+      }
+    : authorId;
 
   if (channelType === 'dm' || channelType === 'groupDm') {
     const delta: WritDeltaAdd = {
@@ -159,7 +170,7 @@ export const sendPost = async ({
         essay: {
           content,
           sent: sentAt,
-          author: authorId,
+          author,
           kind: '/chat',
           meta: null,
           blob: blob ?? null,
@@ -170,7 +181,7 @@ export const sendPost = async ({
 
     const action = chatAction(
       channelId,
-      `${delta.add.essay.author}/${formatUd(da.fromUnix(delta.add.essay.sent).toString())}`,
+      `${authorId}/${formatUd(da.fromUnix(delta.add.essay.sent).toString())}`,
       delta
     );
     await poke(action);
@@ -191,6 +202,7 @@ export const sendPost = async ({
           cover: metadata.cover || '',
         }
       : undefined,
+    botProfile,
   });
 
   const action = channelPostAction(channelId, {
@@ -292,6 +304,7 @@ export const sendReply = async ({
   content,
   sentAt,
   authorId,
+  botProfile,
 }: {
   authorId: string;
   channelId: string;
@@ -299,7 +312,17 @@ export const sendReply = async ({
   parentAuthor: string;
   content: Story;
   sentAt: number;
+  botProfile?: { nickname?: string | null; avatar?: string | null };
 }) => {
+  // Build author - either simple ship or BotProfile object
+  const author: ub.Author = botProfile
+    ? {
+        ship: authorId,
+        nickname: botProfile.nickname ?? null,
+        avatar: botProfile.avatar ?? null,
+      }
+    : authorId;
+
   if (isDmChannelId(channelId) || isGroupDmChannelId(channelId)) {
     const delta: ub.ReplyDelta = {
       reply: {
@@ -309,7 +332,7 @@ export const sendReply = async ({
           add: {
             memo: {
               content,
-              author: authorId,
+              author,
               sent: sentAt,
             },
             time: null,
@@ -329,7 +352,7 @@ export const sendReply = async ({
       action: {
         add: {
           content,
-          author: authorId,
+          author,
           sent: sentAt,
         },
       },
