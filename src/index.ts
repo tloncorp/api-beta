@@ -123,6 +123,17 @@ export type {
   Post as UrbitPost,
   Reply,
   Memo,
+  PostEssay,
+
+  // Authors (for bot-meta support)
+  Author,
+  BotProfile,
+  Ship,
+
+  // Channel responses (for subscription handlers)
+  Response as ChannelResponse,
+  PostResponse,
+  ReplyResponse,
 
   // Groups
   Group as UrbitGroup,
@@ -137,6 +148,16 @@ export type {
   NotificationLevel,
   Volume,
   Source,
+} from './urbit';
+
+// =============================================================================
+// DM Protocol Types
+// =============================================================================
+export type {
+  WritResponse,
+  WritResponseDelta,
+  WritDelta,
+  WritDiff,
 } from './urbit';
 
 // Urbit utility functions
